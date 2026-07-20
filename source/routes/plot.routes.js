@@ -6,7 +6,7 @@ const router = express.Router()
 
 router.post('/createPlot/:_idProject', authMiddleware.authenticateAdmin, plotController.createPlot)
 router.patch('/updatePlot/:_idProject/:_idPlot', authMiddleware.authenticateAdmin, plotController.updatePlot)
-router.get('/search', authMiddleware.authenticate, plotController.search)
+router.get('/search/:_idProject', authMiddleware.authenticate, plotController.search)
 router.get('/getPlots/:_idProject', authMiddleware.authenticate, plotController.getPlots)
 router.get('/getPlot/:_idProject/:_idPlot', authMiddleware.authenticate, plotController.getPlotById)
 router.get('/getPlots/:_idProject/priceRange', authMiddleware.authenticate, plotController.getPlotsByPriceRange)
