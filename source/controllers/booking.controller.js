@@ -267,4 +267,4 @@ async function deleteBooking(request, response) {
     }
 }
 
-module.exports = { createBooking, search, getBookings, getBookingById, getBookingsOfUser, getBookingsOfAllUser, getBookingsByStatus, getBookingsByDateRange, getBookingsByPriceRange, deleteBooking }
+module.exports = { createBooking, updateBooking, search, getBookings, getBookingById, getBookingsOfUser, getBookingsOfAllUser, getBookingsByStatus, getBookingsByDateRange, getBookingsByPriceRange, deleteBooking }
