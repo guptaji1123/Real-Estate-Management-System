@@ -1,8 +1,10 @@
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Building2, Lock, User, Eye, EyeOff } from "lucide-react";
 import { motion } from "motion/react";
 
 function Login() {
+    const navigate = useNavigate();
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -12,6 +14,7 @@ function Login() {
 
         console.log("Username:", username);
         console.log("Password:", password);
+         navigate("/dashboard");
     };
 
     return (
@@ -107,7 +110,7 @@ function Login() {
                         </h2>
 
                         <p className="mt-2 text-slate-400">
-                            Sign in to access your dashboard.
+                            Login in to access your dashboard.
                         </p>
                     </div>
 
