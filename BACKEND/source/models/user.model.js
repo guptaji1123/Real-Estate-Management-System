@@ -53,6 +53,23 @@ const userSchema = new mongoose.Schema({
             message: 'Role must be either WORKER or ADMIN'
         },
         default: 'WORKER',
+    },
+    resetOtpHash: {
+        type: String,
+        select: false
+    },
+    resetOtpExpires: {
+        type: Date,
+        select: false
+    },
+    resetOtpAttempts: {
+        type: Number,
+        default: 0,
+        select: false
+    },
+    resetOtpSentAt: {
+        type: Date,
+        select: false
     }
 }, { timestamps: true })
 
