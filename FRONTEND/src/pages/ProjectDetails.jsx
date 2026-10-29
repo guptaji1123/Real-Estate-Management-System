@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
+import PlotFilter from "../components/PlotFilter";
 
 function ProjectDetails({ user }) {
 
@@ -11,6 +12,9 @@ function ProjectDetails({ user }) {
   // Store project and plots
   const [project, setProject] = useState(null);
   const [plots, setPlots] = useState([]);
+  const [search, setSearch] = useState("");
+const [statusFilter, setStatusFilter] = useState("ALL");
+const [maxPrice, setMaxPrice] = useState("");
 
   // Store form input values
   const [plotNumber, setPlotNumber] = useState("");
@@ -29,6 +33,20 @@ function ProjectDetails({ user }) {
   const [error, setError] = useState("");
 
   const isAdmin = user.role === "ADMIN";
+    // Filter plots based on search, status, and maximum price
+  const filteredPlots = plots.filter((plot) => {
+    const matchesSearch = String(plot.plotNumber)
+      .toLowerCase()
+      .includes(search.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "ALL" || plot.status === statusFilter;
+
+    const matchesPrice =
+      maxPrice === "" || Number(plot.price) <= Number(maxPrice);
+
+    return matchesSearch && matchesStatus && matchesPrice;
+  });
 
   // Load project details and its plots
   async function loadData() {
@@ -350,6 +368,14 @@ function ProjectDetails({ user }) {
 
           {/* Plot list */}
           <h2>Plots in this Project</h2>
+          <PlotFilter
+  search={search}
+  setSearch={setSearch}
+  statusFilter={statusFilter}
+  setStatusFilter={setStatusFilter}
+  maxPrice={maxPrice}
+  setMaxPrice={setMaxPrice}
+/>
 
           <div className="panel table-wrap">
 
@@ -367,7 +393,7 @@ function ProjectDetails({ user }) {
 
               <tbody>
 
-                {plots.length === 0 ? (
+                 {filteredPlots.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="muted">
                       No plots added yet.
@@ -375,7 +401,7 @@ function ProjectDetails({ user }) {
                   </tr>
 
                 ) : (
-                  plots.map((plot) => (
+                  filteredPlots.map((plot) => (
                     <tr key={plot._id}>
 
                       <td>
