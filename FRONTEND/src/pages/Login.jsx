@@ -9,6 +9,7 @@ function Login({ onLogin }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+
   async function handleLogin(event) {
     event.preventDefault();
 
@@ -16,25 +17,29 @@ function Login({ onLogin }) {
     setLoading(true);
 
     try {
-      await api("/auth/login", {
+      // Verify credentials with backend
+      const response = await api("/auth/login", {
         method: "POST",
         body: JSON.stringify({
-          username: username,
-          password: password
+          username,
+          password
         })
       });
 
+      // Fetch logged-in user details
       const result = await api("/user/getUser");
 
+      // Update login state
       onLogin(result.user);
 
     } catch (error) {
-      setError(error.message);
+      setError(error.message || "Invalid username or password");
 
     } finally {
       setLoading(false);
     }
   }
+
 
   return (
     <main className="login-wrap">
@@ -83,9 +88,7 @@ function Login({ onLogin }) {
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        <p className="muted small">
-          Use an account already created in the backend database.
-        </p>
+
 
       </form>
 
