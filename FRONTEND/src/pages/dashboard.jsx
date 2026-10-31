@@ -1,185 +1,323 @@
-function Dashboard() {
-  const role = "ADMIN";
-  const userRole = role === "ADMIN" ? "Owner" : "Worker";
 
-  const projects = [
-    {
-      name: "Green Valley Residency",
-      location: "North Sector",
-      totalPlots: 48,
-      soldPlots: 12,
-      availablePlots: 36,
-      occupancy: 75,
-      status: "On Track",
-    },
-    {
-      name: "Sunrise Residency",
-      location: "East Hills",
-      totalPlots: 60,
-      soldPlots: 20,
-      availablePlots: 40,
-      occupancy: 67,
-      status: "Healthy",
-    },
-    {
-      name: "Lake View Estate",
-      location: "West End",
-      totalPlots: 34,
-      soldPlots: 27,
-      availablePlots: 7,
-      occupancy: 79,
-      status: "Selling Fast",
-    },
-  ];
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { api } from "../api";
 
-  const totalPlots = projects.reduce((total, project) => total + project.totalPlots, 0);
-  const totalSoldPlots = projects.reduce((total, project) => total + project.soldPlots, 0);
-  const totalAvailablePlots = projects.reduce((total, project) => total + project.availablePlots, 0);
+function Dashboard({ user }) {
 
-  const stats = [
-    { label: "Projects", value: projects.length, detail: "Active developments" },
-    { label: "Total Plots", value: totalPlots, detail: "Across all sites" },
-    { label: "Available Plots", value: totalAvailablePlots, detail: "Ready to sell" },
-    { label: "Sold Plots", value: totalSoldPlots, detail: "Confirmed sales" },
-  ];
+  // Store projects from MongoDB
+  const [projects, setProjects] = useState([]);
 
-  const activity = [
-    { title: "New booking received", time: "2 hours ago" },
-    { title: "Plot allocation updated", time: "5 hours ago" },
-    { title: "Payment confirmation approved", time: "Yesterday" },
-  ];
+  // Store values entered in the form
+  const [name, setName] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
+  const [status, setStatus] = useState("PLANNING");
+
+  // Control form and editing
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+
+  // Display errors and loading
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const isAdmin = user.role === "ADMIN";
+
+  // Get projects from backend
+  async function loadProjects() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const data = await api("/project/getProjects");
+      setProjects(data.projects || []);
+    } catch (error) {
+      if (error.status === 404) {
+        setProjects([]);
+      } else {
+        setError(error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Run once when dashboard opens
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  // Open form for new project
+  function addProject() {
+    setName("");
+    setLocation("");
+    setDescription("");
+    setStatus("PLANNING");
+
+    setEditingId(null);
+    setShowForm(true);
+  }
+
+  // Open form with existing project details
+  function editProject(project) {
+    setName(project.name);
+    setLocation(project.location);
+    setDescription(project.description || "");
+    setStatus(project.status);
+
+    setEditingId(project._id);
+    setShowForm(true);
+  }
+
+  // Save new project or update existing project
+  async function saveProject(event) {
+    event.preventDefault();
+
+    const projectData = {
+      name: name,
+      location: location,
+      description: description,
+      status: status
+    };
+
+    let url = "/project/createProject";
+    let method = "POST";
+
+    if (editingId) {
+      url = "/project/updateProject/" + editingId;
+      method = "PATCH";
+    }
+
+    try {
+      await api(url, {
+        method: method,
+        body: JSON.stringify(projectData)
+      });
+
+      setShowForm(false);
+      await loadProjects();
+
+    } catch (error) {
+      setError(error.message);
+    }
+  }
+
+  // Delete a project
+  async function deleteProject(project) {
+    const confirmDelete = window.confirm(
+      "Do you want to delete " + project.name + "?"
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      await api("/project/deleteProject/" + project._id, {
+        method: "DELETE"
+      });
+
+      await loadProjects();
+
+    } catch (error) {
+      setError(error.message);
+    }
+  }
 
   return (
-    <div className="dashboard">
-      <div className="dashboard-shell">
-        <header className="topbar">
-          <div className="brand-wrap">
-            <div className="brand-mark">E</div>
-            <div>
-              <p className="brand-title">EstateHub</p>
-              <span className="brand-subtitle">Real Estate Management</span>
-            </div>
+    <main className="container">
+
+      <div className="page-top">
+        <div>
+          <h1>Dashboard</h1>
+          <p>Manage your real-estate projects</p>
+        </div>
+
+        {isAdmin && (
+          <button className="primary" onClick={addProject}>
+            Add Project
+          </button>
+        )}
+      </div>
+
+      {/* Project statistics */}
+      <section className="stats">
+
+        <div className="stat">
+          <span>Total Projects</span>
+          <strong>{projects.length}</strong>
+        </div>
+
+        <div className="stat">
+          <span>Ongoing</span>
+          <strong>
+            {projects.filter(project =>
+              project.status === "ONGOING"
+            ).length}
+          </strong>
+        </div>
+
+        <div className="stat">
+          <span>Completed</span>
+          <strong>
+            {projects.filter(project =>
+              project.status === "COMPLETED"
+            ).length}
+          </strong>
+        </div>
+
+      </section>
+
+      {error && <p className="error">{error}</p>}
+
+      {/* Add or edit project form */}
+      {showForm && isAdmin && (
+        <form className="panel form" onSubmit={saveProject}>
+
+          <h2>
+            {editingId ? "Edit Project" : "Add Project"}
+          </h2>
+
+          <div className="form-grid">
+
+            <label>
+              Project Name
+              <input
+                required
+                minLength="3"
+                maxLength="100"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </label>
+
+            <label>
+              Location
+              <input
+                required
+                maxLength="200"
+                value={location}
+                onChange={(event) => setLocation(event.target.value)}
+              />
+            </label>
+
+            <label>
+              Status
+              <select
+                value={status}
+                onChange={(event) => setStatus(event.target.value)}
+              >
+                <option value="PLANNING">Planning</option>
+                <option value="ONGOING">Ongoing</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="ON_HOLD">On Hold</option>
+              </select>
+            </label>
+
+            <label>
+              Description
+              <textarea
+                maxLength="1000"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </label>
+
           </div>
 
-          <div className="topbar-actions">
-            <span className="user-pill">{userRole}</span>
-            <button type="button" className="logout-btn">
-              Logout
+          <div className="actions">
+            <button className="primary" type="submit">
+              {editingId ? "Update Project" : "Save Project"}
+            </button>
+
+            <button
+              className="outline"
+              type="button"
+              onClick={() => setShowForm(false)}
+            >
+              Cancel
             </button>
           </div>
-        </header>
 
-        <main className="dashboard-content">
-          <section className="welcome-panel">
-            <div>
-              <p className="eyebrow">Dashboard overview</p>
-              <h1>Welcome back, {userRole}</h1>
-              <p className="subtext">Manage and monitor your real estate projects.</p>
-            </div>
+        </form>
+      )}
 
-            {role === "ADMIN" && (
-              <button type="button" className="primary-btn">
-                + New Project
-              </button>
-            )}
-          </section>
+      {/* Project list */}
+      <h2>Projects</h2>
 
-          <section className="stats-grid">
-            {stats.map((stat) => (
-              <div key={stat.label} className="stat-card">
-                <span className="stat-label">{stat.label}</span>
-                <strong>{stat.value}</strong>
-                <small>{stat.detail}</small>
-              </div>
-            ))}
-          </section>
+      {loading ? (
+        <p>Loading projects...</p>
+      ) : projects.length === 0 ? (
+        <p>No projects found.</p>
+      ) : (
+        <div className="panel table-wrap">
+          <table>
 
-          <section className="dashboard-grid">
-            <div className="project-panel">
-              <div className="panel-header">
-                <h2>Your Projects</h2>
-                {role === "ADMIN" && (
-                  <button type="button" className="ghost-btn">
-                    + Add
-                  </button>
-                )}
-              </div>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
 
-              <div className="project-list">
-                {projects.map((project) => (
-                  <article className="project-card" key={project.name}>
-                    <div className="project-header">
-                      <div>
-                        <h3>{project.name}</h3>
-                        <span>{project.location}</span>
-                      </div>
+            <tbody>
+              {projects.map((project) => (
+                <tr key={project._id}>
 
-                      <span className={`status-badge ${project.status.toLowerCase().replace(/\s+/g, "-")}`}>
-                        {project.status}
-                      </span>
+                  <td>
+                    <strong>{project.name}</strong>
+                    <p className="muted small">
+                      {project.description}
+                    </p>
+                  </td>
+
+                  <td>{project.location}</td>
+
+                  <td>{project.status.replace("_", " ")}</td>
+
+                  <td>
+                    <div className="actions">
+
+                      <Link
+                        className="button-link"
+                        to={"/projects/" + project._id}
+                      >
+                        View Plots
+                      </Link>
+
+                      {isAdmin && (
+                        <>
+                          <button
+                            className="outline"
+                            onClick={() => editProject(project)}
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            className="danger"
+                            onClick={() => deleteProject(project)}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+
                     </div>
+                  </td>
 
-                    <div className="project-meta">
-                      <span>{project.totalPlots} plots</span>
-                      <span>{project.soldPlots} sold</span>
-                      <span>{project.availablePlots} available</span>
-                    </div>
+                </tr>
+              ))}
+            </tbody>
 
-                    <div className="progress-wrap">
-                      <div className="progress-bar">
-                        <span style={{ width: `${project.occupancy}%` }} />
-                      </div>
-                      <label>{project.occupancy}% sold</label>
-                    </div>
+          </table>
+        </div>
+      )}
 
-                    <button type="button" className="secondary-btn">
-                      {role === "ADMIN" ? "Open Project" : "View Project"}
-                    </button>
-                  </article>
-                ))}
-              </div>
-            </div>
-
-            <aside className="side-panel">
-              <div className="mini-panel">
-                <div className="panel-header">
-                  <h3>Quick Overview</h3>
-                </div>
-
-                <ul className="activity-list">
-                  {activity.map((item) => (
-                    <li key={item.title}>
-                      <span className="activity-dot" />
-                      <div>
-                        <p>{item.title}</p>
-                        <small>{item.time}</small>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="mini-panel summary-panel">
-                <div className="panel-header">
-                  <h3>Portfolio</h3>
-                </div>
-
-                <div className="summary-box">
-                  <div>
-                    <span>Sales Rate</span>
-                    <strong>{Math.round((totalSoldPlots / totalPlots) * 100)}%</strong>
-                  </div>
-                  <div>
-                    <span>Revenue</span>
-                    <strong>$1.4M</strong>
-                  </div>
-                </div>
-              </div>
-            </aside>
-          </section>
-        </main>
-      </div>
-    </div>
+    </main>
   );
 }
 
